@@ -1,9 +1,9 @@
-# LiqDex
-LiqDex – Fast and secure Solana token swap platform. Swap high-volume Solana tokens instantly using the Jupiter API with low fees. Track liquidity, connect Phantom wallet, and enjoy safe, professional crypto swaps.
+# liqdex-swap
+ liqdex-swap Fast and secure Solana token swap platform. Swap high-volume Solana tokens instantly using the Jupiter API with low fees. Track liquidity, connect Phantom wallet, and enjoy safe, professional crypto swaps.
 
 MIT License
 
-Copyright (c) 2026 LiqDex
+Copyright (c) 2026 liqdex-swap
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
