@@ -1,24 +1,24 @@
-# liqdex-swap
- liqdex-swap Fast and secure Solana token swap platform. Swap high-volume Solana tokens instantly using the Jupiter API with low fees. Track liquidity, connect Phantom wallet, and enjoy safe, professional crypto swaps.
+# LiqDex-Swap
 
-MIT License
+LiqDex-Swap is a fast, secure, and professional Solana token swap platform.  
+Discover **newly launched Solana tokens** and **high-volume meme coins**, track live prices, and swap instantly using the **Jupiter API**.  
 
-Copyright (c) 2026 liqdex-swap
+## Features
+- Browse high-volume Solana tokens and meme coins
+- Search by name, symbol, or contract address
+- Real-time SOL → token estimation
+- Platform fee: $0.30 per swap (automatically sent to your SOL wallet)
+- Safe wallet connection: Phantom, Solflare, Backpack
+- Live token liquidity, 24h volume, and price change
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## How it Works
+Users can select a token from the dashboard, see price and liquidity, and swap safely. The platform fee is charged **before executing swaps**.  
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+**Wallet for fees:** 33LGNbhTCADQiNwj1CPZrfNfhe6xrJucEV4oxV39PGwg  
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Powered by the [Jupiter API](https://jup.ag) for high-volume, low-slippage swaps on Solana.
+
+---
+
+**License**  
+MIT License. See [LICENSE](LICENSE) for details.
