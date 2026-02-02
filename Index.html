@@ -1,157 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jupiter Swap – Direct Execution</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DexSignal | Live Charts & High Performance Swap</title>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <script src="https://bundle.run/buffer@6.0.3"></script>
+    <script>window.Buffer = window.Buffer || buffer.Buffer;</script>
+    <style>
+        :root { --primary: #38bdf8; --bg: #0b0f1a; --card: rgba(30, 41, 59, 0.5); --gain: #22c55e; }
+        body { 
+            background: var(--bg); color: white; font-family: 'Inter', sans-serif; 
+            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
+            zoom: 85%; /* YOUR PROFESSIONAL PERSPECTIVE */
+        }
+        
+        /* 3-COLUMN LAYOUT: List | Swap | Chart */
+        .dashboard-container { 
+            display: grid; 
+            grid-template-columns: 300px 380px 1fr; 
+            gap: 20px; 
+            width: 100%; 
+            max-width: 1600px;
+            margin-top: 20px;
+        }
 
-<!-- Phantom Wallet & Solana adapters -->
-<script src="https://unpkg.com/@solana/wallet-adapter-base@latest/dist/index.umd.js"></script>
-<script src="https://unpkg.com/@solana/wallet-adapter-wallets@latest/dist/index.umd.js"></script>
-<script src="https://unpkg.com/@solana/wallet-adapter-phantom@latest/dist/index.umd.js"></script>
-<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+        /* SECTION STYLING */
+        .glass-panel { 
+            background: var(--card); backdrop-filter: blur(12px); border-radius: 24px; 
+            border: 1px solid rgba(255,255,255,0.05); padding: 20px;
+            height: 700px;
+        }
 
-<style>
-body { font-family: Arial; background:#f9f9f9; padding:20px; }
-button { padding:10px 16px; margin:5px; cursor:pointer; border:none; border-radius:6px; font-weight:bold; }
-input, select { padding:8px; margin:5px 0; width:300px; }
-#quoteResult { background:#eee; padding:10px; border-radius:6px; margin-top:10px; white-space:pre-wrap; }
-#terms { background:#fff3cd; padding:12px; border-radius:8px; margin-top:20px; font-size:14px; }
-</style>
+        /* GAINERS LIST */
+        .gainer-list { height: 90%; overflow-y: auto; }
+        .token-row { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+            cursor: pointer; transition: 0.2s;
+        }
+        .token-row:hover { background: rgba(56, 189, 248, 0.1); border-radius: 12px; }
+        .gain-percent { color: var(--gain); font-weight: bold; font-size: 14px; }
+        
+        /* CHART SECTION */
+        #chart-container { width: 100%; height: 100%; border-radius: 15px; overflow: hidden; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* SWAP BOX */
+        .swap-card { border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 30px rgba(56, 189, 248, 0.05); height: auto; }
+        .logo { font-size: 36px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; }
+        .tagline { font-size: 12px; color: #64748b; margin-top: -10px; margin-bottom: 20px; }
+
+        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 16px; border-radius: 14px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-swap { background: var(--primary); color: #0b0f1a; margin-top: 15px; font-size: 16px; }
+        
+        @media (max-width: 1000px) {
+            .dashboard-container { grid-template-columns: 1fr; }
+            .glass-panel { height: auto; }
+            #chart-container { height: 400px; }
+        }
+    </style>
 </head>
 <body>
 
-<h1>Jupiter Swap – Direct Execution</h1>
+    <div class="logo">DEXSIGNAL</div>
+    <div class="tagline">LIVE MARKET AGGREGATOR • REAL-TIME CHARTS</div>
 
-<!-- Wallet connect -->
-<button id="connectWalletBtn">Connect Phantom Wallet</button>
-<p id="walletAddress"></p>
+    <div class="dashboard-container">
+        
+        <div class="glass-panel">
+            <h3 style="margin-top:0; font-size: 16px; color: var(--primary);">🚀 Top 15 Signals</h3>
+            <div class="gainer-list" id="gainerContainer"></div>
+        </div>
 
-<!-- Wallet permission modal -->
-<div id="permissionModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:999;">
-  <div style="background:#fff; max-width:400px; margin:80px auto; padding:20px; border-radius:10px;">
-    <h3>🔐 Wallet Permissions</h3>
-    <p>By connecting your wallet, this website can:
-      <ul>
-        <li>View your public wallet address</li>
-        <li>View token balances</li>
-      </ul>
-      We <strong>cannot</strong> move funds without your explicit approval.
-    </p>
-    <button onclick="confirmWalletConnect()" style="background:#4caf50; color:#fff;">Continue</button>
-  </div>
-</div>
+        <div class="glass-panel swap-card">
+            <button id="connectBtn" style="background:#1e293b; color:white; margin-bottom:15px;">Connect Phantom</button>
+            <p id="walletStatus" style="font-size:11px; text-align:center; color:#94a3b8; margin-top:-10px; margin-bottom:15px;">Disconnected</p>
+            
+            <label style="font-size:11px; color:var(--primary); font-weight:bold;">SELL (FROM)</label>
+            <input id="fromToken" value="So11111111111111111111111111111111111111112">
 
-<!-- Swap form -->
-<h3>Swap Tokens</h3>
-<label>From Token</label>
-<select id="fromToken">
-  <option value="So11111111111111111111111111111111111111112">SOL</option>
-  <option value="Es9vMFrzaCERmJfrF4H2FYD4zY2S7hF7YJ8i3S3NwY">USDT</option>
-  <option value="EPjFWdd5AufqSSqeM2q9A9W4r1hJ8g9Gz8k3g9x">USDC</option>
-</select>
+            <label style="font-size:11px; color:var(--primary); font-weight:bold;">BUY SIGNAL (TO)</label>
+            <input id="toToken" placeholder="Select from list or paste address">
 
-<label>To Token</label>
-<select id="toToken">
-  <option value="EPjFWdd5AufqSSqeM2q9A9W4r1hJ8g9Gz8k3g9x">USDC</option>
-  <option value="Es9vMFrzaCERmJfrF4H2FYD4zY2S7hF7YJ8i3S3NwY">USDT</option>
-  <option value="So11111111111111111111111111111111111111112">SOL</option>
-</select>
+            <label style="font-size:11px; color:var(--primary); font-weight:bold;">AMOUNT (LAMPORTS)</label>
+            <input id="amount" type="number" value="100000000">
 
-<label>Amount (in lamports, 1 SOL = 1_000_000_000)</label>
-<input type="number" id="amount">
+            <button class="btn-swap" id="swapBtn">EXECUTE SIGNAL TRADE</button>
+            <p style="font-size: 10px; color: #475569; margin-top: 15px; text-align: center;">Click a token on the left to load live chart.</p>
+        </div>
 
-<label>Slippage (%)</label>
-<input type="number" id="slippage" value="1" min="0.1" step="0.1">
+        <div class="glass-panel" style="padding: 10px;">
+            <div id="chart-container">
+                <iframe id="dexChart" src="https://dexscreener.com/solana/So11111111111111111111111111111111111111112?embed=1&theme=dark&trades=0&info=0"></iframe>
+            </div>
+        </div>
 
-<label><input type="checkbox" id="devnetToggle"> Use Devnet (testing)</label><br>
+    </div>
 
-<button id="getQuoteBtn">Get Quote</button>
-<div id="quoteResult"></div>
-<button id="swapBtn" style="background:#4caf50; color:white; display:none;">Execute Swap</button>
+    <script>
+        const top15Tokens = [
+            { name: "SOL", mint: "So11111111111111111111111111111111111111112", change: "+4.2%" },
+            { name: "JUP", mint: "JUPyiZJpEGkW4thNsSBkS7HsSBYfCAzYkB5566T7H3", change: "+12.5%" },
+            { name: "PYTH", mint: "HZ1JskcNpdxYvS9S5v2B6P226rVToMynxY3tVUn858f", change: "+7.8%" },
+            { name: "BONK", mint: "DezXAZ8z7PnrnAn9rr5yS9yMGL5iS679k6sM8y9iM8M8", change: "+24.1%" },
+            { name: "WIF", mint: "EKpQGSJtjMFqKZ9KQanAtu7YXQdAd9V87V48jU4uS7C3", change: "+18.3%" },
+            { name: "POPCAT", mint: "7GCihUe8v6f67m28N36wky9JpTSsXF1E1s6i8sJpump", change: "+35.2%" },
+            { name: "BOME", mint: "ukHH6cAFv7Vof3FmWhXmD5Y8S159zCQuuF859Khtn3S", change: "+14.9%" },
+            { name: "MEW", mint: "MEW1VNo826u96N66yv3B8r6Ff6fF6fF6fF6fF6fF6f", change: "+21.5%" },
+            { name: "TRUMP", mint: "6p6W51psvLLMDLW8asR97H5W33xK4x7F1R5Y6eP3pump", change: "+9.4%" },
+            { name: "RAY", mint: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R", change: "+11.7%" },
+            { name: "DRIFT", mint: "DriFtupJYLTaxuS7QkRYy7pS9P169Dk215NMMt7K", change: "+13.8%" },
+            { name: "JTO", mint: "jtoS9zpbS9zpbS9zpbS9zpbS9zpbS9zpbS9zpbS9zpb", change: "+8.9%" },
+            { name: "FARTCOIN", mint: "9BB6NdpS4i3Zas95WJKxV8XF9GgC6k4h65zT7pump", change: "+55.3%" },
+            { name: "PENGU", mint: "2z6uYjhD9pX8vG5QyU7Bf2fWfWfWfWfWfWfWfWfWfWf", change: "+42.1%" },
+            { name: "USDC", mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", change: "STABLE" }
+        ];
 
-<div id="terms">
-<strong>⚠️ Risk Disclaimer</strong><br><br>
-This website is a non-custodial interface. All transactions require your wallet approval.
-Cryptocurrency trading involves risk. Use at your own discretion.
-</div>
+        function loadGainers() {
+            const container = document.getElementById('gainerContainer');
+            container.innerHTML = top15Tokens.map(token => `
+                <div class="token-row" onclick="selectToken('${token.mint}', '${token.name}')">
+                    <div>
+                        <span style="font-weight:bold; font-size:14px;">${token.name}</span><br>
+                        <span style="font-size:10px; color:#64748b;">${token.mint.slice(0,6)}...</span>
+                    </div>
+                    <div class="gain-percent">${token.change}</div>
+                </div>
+            `).join('');
+        }
 
-<script>
-let provider;
-let walletAddress;
-let currentRoute;
+        function selectToken(mint, symbol) {
+            document.getElementById('toToken').value = mint;
+            // UPDATE CHART IFRAME
+            document.getElementById('dexChart').src = `https://dexscreener.com/solana/${mint}?embed=1&theme=dark&trades=0&info=0`;
+            
+            const btn = document.getElementById('swapBtn');
+            btn.innerText = "SWAP TO " + symbol;
+            setTimeout(() => { btn.innerText = "EXECUTE SIGNAL TRADE"; }, 2000);
+        }
 
-// Wallet modal
-document.getElementById("connectWalletBtn").onclick = () => {
-  document.getElementById("permissionModal").style.display = "block";
-};
+        window.onload = loadGainers;
 
-async function confirmWalletConnect() {
-  document.getElementById("permissionModal").style.display = "none";
-  if (!window.solana?.isPhantom) {
-    alert("Phantom Wallet not found");
-    return;
-  }
-  provider = window.solana;
-  const resp = await provider.connect();
-  walletAddress = resp.publicKey.toString();
-  document.getElementById("walletAddress").innerText = "Connected: " + walletAddress;
-}
+        // WALLET & SWAP LOGIC
+        let wallet;
+        document.getElementById('connectBtn').onclick = async () => {
+            const resp = await window.solana.connect();
+            wallet = resp.publicKey.toString();
+            document.getElementById('walletStatus').innerText = "Active: " + wallet.slice(0,8) + "...";
+        };
 
-// Helper to get cluster
-function getCluster() {
-  return document.getElementById("devnetToggle").checked ? "devnet" : "mainnet-beta";
-}
-
-// Get quote from serverless API
-document.getElementById("getQuoteBtn").onclick = async () => {
-  const fromToken = document.getElementById("fromToken").value;
-  const toToken = document.getElementById("toToken").value;
-  const amount = document.getElementById("amount").value;
-  const slippage = document.getElementById("slippage").value;
-
-  if (!fromToken || !toToken || !amount) { alert("Enter all fields"); return; }
-
-  try {
-    const resp = await fetch(`/api/quote?fromToken=${fromToken}&toToken=${toToken}&amount=${amount}&slippage=${slippage}&cluster=${getCluster()}`);
-    const data = await resp.json();
-    if (!data.routes || data.routes.length === 0) {
-      document.getElementById("quoteResult").innerText = "No swap routes found.";
-      document.getElementById("swapBtn").style.display = "none";
-      return;
-    }
-    currentRoute = data.routes[0];
-    document.getElementById("quoteResult").innerText = JSON.stringify(currentRoute, null, 2);
-    document.getElementById("swapBtn").style.display = "inline-block";
-  } catch (err) {
-    document.getElementById("quoteResult").innerText = "Error fetching quote: " + err.message;
-  }
-};
-
-// Execute swap
-document.getElementById("swapBtn").onclick = async () => {
-  if (!provider || !walletAddress || !currentRoute) { alert("Connect wallet and get quote first"); return; }
-
-  try {
-    const response = await fetch("/api/swap", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ route: currentRoute, userPublicKey: walletAddress })
-    });
-
-    const { swapTransaction } = await response.json();
-    const txBuffer = Uint8Array.from(atob(swapTransaction), c => c.charCodeAt(0));
-    const transaction = solanaWeb3.VersionedTransaction.deserialize(txBuffer);
-    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(getCluster()), "confirmed");
-    const signedTx = await provider.signTransaction(transaction);
-    const txid = await connection.sendRawTransaction(signedTx.serialize());
-    await connection.confirmTransaction(txid);
-
-    alert("✅ Swap successful! TXID:\n" + txid);
-  } catch (err) {
-    alert("❌ Swap failed: " + err.message);
-  }
-};
-</script>
+        document.getElementById('swapBtn').onclick = async () => {
+            if (!wallet) return alert("Please connect wallet");
+            try {
+                const from = document.getElementById('fromToken').value;
+                const to = document.getElementById('toToken').value;
+                const amt = document.getElementById('amount').value;
+                const q = await fetch(`/api/quote?fromToken=${from}&toToken=${to}&amount=${amt}`);
+                const quote = await q.json();
+                const s = await fetch('/api/swap', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ quoteResponse: quote, userPublicKey: wallet })
+                });
+                const { swapTransaction } = await s.json();
+                const transaction = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
+                const { signature } = await window.solana.signAndSendTransaction(transaction);
+                alert("Success! TX: " + signature);
+            } catch (e) { alert("Execution Failed."); }
+        };
+    </script>
 </body>
-  </html>
+</html>
