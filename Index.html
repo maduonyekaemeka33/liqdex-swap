@@ -1,175 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DexSignal | Live Charts & High Performance Swap</title>
-    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
-    <script src="https://bundle.run/buffer@6.0.3"></script>
-    <script>window.Buffer = window.Buffer || buffer.Buffer;</script>
-    <style>
-        :root { --primary: #38bdf8; --bg: #0b0f1a; --card: rgba(30, 41, 59, 0.5); --gain: #22c55e; }
-        body { 
-            background: var(--bg); color: white; font-family: 'Inter', sans-serif; 
-            margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center;
-            zoom: 85%; /* YOUR PROFESSIONAL PERSPECTIVE */
-        }
+import requests
+import time
+
+def get_top_20_movers():
+    api_key = "YOUR_API_KEY_HERE"  # Replace with your Birdeye API key (free signup at docs.birdeye.so)
+
+    url = "https://public-api.birdeye.so/defi/v3/token/list"
+    
+    params = {
+        "sort_by": "price_change_24h",      # Sort by 24h % change
+        "sort_type": "desc",                # Highest gains first
+        "offset": 0,
+        "limit": 20,                        # Top 20
+        "ui_amount_mode": "scaled"          # Human-readable amounts
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "x-chain": "solana",                # Solana tokens only
+        "X-API-KEY": api_key
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()  # Raise error for bad HTTP status
         
-        /* 3-COLUMN LAYOUT: List | Swap | Chart */
-        .dashboard-container { 
-            display: grid; 
-            grid-template-columns: 300px 380px 1fr; 
-            gap: 20px; 
-            width: 100%; 
-            max-width: 1600px;
-            margin-top: 20px;
-        }
-
-        /* SECTION STYLING */
-        .glass-panel { 
-            background: var(--card); backdrop-filter: blur(12px); border-radius: 24px; 
-            border: 1px solid rgba(255,255,255,0.05); padding: 20px;
-            height: 700px;
-        }
-
-        /* GAINERS LIST */
-        .gainer-list { height: 90%; overflow-y: auto; }
-        .token-row { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); 
-            cursor: pointer; transition: 0.2s;
-        }
-        .token-row:hover { background: rgba(56, 189, 248, 0.1); border-radius: 12px; }
-        .gain-percent { color: var(--gain); font-weight: bold; font-size: 14px; }
+        data = response.json()
         
-        /* CHART SECTION */
-        #chart-container { width: 100%; height: 100%; border-radius: 15px; overflow: hidden; background: #000; }
-        iframe { width: 100%; height: 100%; border: none; }
-
-        /* SWAP BOX */
-        .swap-card { border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 30px rgba(56, 189, 248, 0.05); height: auto; }
-        .logo { font-size: 36px; font-weight: 900; color: var(--primary); letter-spacing: -1.5px; }
-        .tagline { font-size: 12px; color: #64748b; margin-top: -10px; margin-bottom: 20px; }
-
-        input { width: 100%; padding: 14px; margin: 8px 0; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 16px; border-radius: 14px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-swap { background: var(--primary); color: #0b0f1a; margin-top: 15px; font-size: 16px; }
+        if not data.get("success", False):
+            print("API returned error:", data.get("message", "Unknown issue"))
+            return
         
-        @media (max-width: 1000px) {
-            .dashboard-container { grid-template-columns: 1fr; }
-            .glass-panel { height: auto; }
-            #chart-container { height: 400px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="logo">DEXSIGNAL</div>
-    <div class="tagline">LIVE MARKET AGGREGATOR • REAL-TIME CHARTS</div>
-
-    <div class="dashboard-container">
+        items = data["data"].get("items", [])
         
-        <div class="glass-panel">
-            <h3 style="margin-top:0; font-size: 16px; color: var(--primary);">🚀 Top 15 Signals</h3>
-            <div class="gainer-list" id="gainerContainer"></div>
-        </div>
-
-        <div class="glass-panel swap-card">
-            <button id="connectBtn" style="background:#1e293b; color:white; margin-bottom:15px;">Connect Phantom</button>
-            <p id="walletStatus" style="font-size:11px; text-align:center; color:#94a3b8; margin-top:-10px; margin-bottom:15px;">Disconnected</p>
+        if not items:
+            print("No tokens returned. Check API key, limits, or try again later.")
+            return
+        
+        # Timestamp for "daily" reference
+        current_time = time.strftime("%Y-%m-%d %H:%M:%S UTC")
+        print(f"Top 20 Solana Tokens by 24h % Price Change (Gainers) - {current_time}\n")
+        print("Note: Data from Birdeye (similar to Phantom trending). Huge swings common in memecoins.\n")
+        
+        for rank, token in enumerate(items, 1):
+            symbol = token.get("symbol", "N/A")
+            name = token.get("name", "N/A")
+            change_24h = token.get("price_change_24h", "N/A")  # % change
+            market_cap = token.get("market_cap", "N/A")
+            liquidity = token.get("liquidity", "N/A")
+            volume_24h = token.get("volume_24h_usd", "N/A")
             
-            <label style="font-size:11px; color:var(--primary); font-weight:bold;">SELL (FROM)</label>
-            <input id="fromToken" value="So11111111111111111111111111111111111111112">
-
-            <label style="font-size:11px; color:var(--primary); font-weight:bold;">BUY SIGNAL (TO)</label>
-            <input id="toToken" placeholder="Select from list or paste address">
-
-            <label style="font-size:11px; color:var(--primary); font-weight:bold;">AMOUNT (LAMPORTS)</label>
-            <input id="amount" type="number" value="100000000">
-
-            <button class="btn-swap" id="swapBtn">EXECUTE SIGNAL TRADE</button>
-            <p style="font-size: 10px; color: #475569; margin-top: 15px; text-align: center;">Click a token on the left to load live chart.</p>
-        </div>
-
-        <div class="glass-panel" style="padding: 10px;">
-            <div id="chart-container">
-                <iframe id="dexChart" src="https://dexscreener.com/solana/So11111111111111111111111111111111111111112?embed=1&theme=dark&trades=0&info=0"></iframe>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        const top15Tokens = [
-            { name: "SOL", mint: "So11111111111111111111111111111111111111112", change: "+4.2%" },
-            { name: "JUP", mint: "JUPyiZJpEGkW4thNsSBkS7HsSBYfCAzYkB5566T7H3", change: "+12.5%" },
-            { name: "PYTH", mint: "HZ1JskcNpdxYvS9S5v2B6P226rVToMynxY3tVUn858f", change: "+7.8%" },
-            { name: "BONK", mint: "DezXAZ8z7PnrnAn9rr5yS9yMGL5iS679k6sM8y9iM8M8", change: "+24.1%" },
-            { name: "WIF", mint: "EKpQGSJtjMFqKZ9KQanAtu7YXQdAd9V87V48jU4uS7C3", change: "+18.3%" },
-            { name: "POPCAT", mint: "7GCihUe8v6f67m28N36wky9JpTSsXF1E1s6i8sJpump", change: "+35.2%" },
-            { name: "BOME", mint: "ukHH6cAFv7Vof3FmWhXmD5Y8S159zCQuuF859Khtn3S", change: "+14.9%" },
-            { name: "MEW", mint: "MEW1VNo826u96N66yv3B8r6Ff6fF6fF6fF6fF6fF6f", change: "+21.5%" },
-            { name: "TRUMP", mint: "6p6W51psvLLMDLW8asR97H5W33xK4x7F1R5Y6eP3pump", change: "+9.4%" },
-            { name: "RAY", mint: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R", change: "+11.7%" },
-            { name: "DRIFT", mint: "DriFtupJYLTaxuS7QkRYy7pS9P169Dk215NMMt7K", change: "+13.8%" },
-            { name: "JTO", mint: "jtoS9zpbS9zpbS9zpbS9zpbS9zpbS9zpbS9zpbS9zpb", change: "+8.9%" },
-            { name: "FARTCOIN", mint: "9BB6NdpS4i3Zas95WJKxV8XF9GgC6k4h65zT7pump", change: "+55.3%" },
-            { name: "PENGU", mint: "2z6uYjhD9pX8vG5QyU7Bf2fWfWfWfWfWfWfWfWfWfWf", change: "+42.1%" },
-            { name: "USDC", mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", change: "STABLE" }
-        ];
-
-        function loadGainers() {
-            const container = document.getElementById('gainerContainer');
-            container.innerHTML = top15Tokens.map(token => `
-                <div class="token-row" onclick="selectToken('${token.mint}', '${token.name}')">
-                    <div>
-                        <span style="font-weight:bold; font-size:14px;">${token.name}</span><br>
-                        <span style="font-size:10px; color:#64748b;">${token.mint.slice(0,6)}...</span>
-                    </div>
-                    <div class="gain-percent">${token.change}</div>
-                </div>
-            `).join('');
-        }
-
-        function selectToken(mint, symbol) {
-            document.getElementById('toToken').value = mint;
-            // UPDATE CHART IFRAME
-            document.getElementById('dexChart').src = `https://dexscreener.com/solana/${mint}?embed=1&theme=dark&trades=0&info=0`;
+            print(f"{rank}. {symbol} ({name})")
+            print(f"   24h Change: {change_24h}%")
             
-            const btn = document.getElementById('swapBtn');
-            btn.innerText = "SWAP TO " + symbol;
-            setTimeout(() => { btn.innerText = "EXECUTE SIGNAL TRADE"; }, 2000);
-        }
+            if isinstance(market_cap, (int, float)):
+                print(f"   Market Cap: ${market_cap:,.0f}")
+            else:
+                print(f"   Market Cap: {market_cap}")
+            
+            if isinstance(liquidity, (int, float)):
+                print(f"   Liquidity: ${liquidity:,.0f}")
+            
+            if isinstance(volume_24h, (int, float)):
+                print(f"   24h Volume: ${volume_24h:,.0f}")
+            
+            print("-" * 50)
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+        if response:
+            print("Response status:", response.status_code)
+            print("Response text:", response.text[:500])  # Truncated for debug
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
-        window.onload = loadGainers;
-
-        // WALLET & SWAP LOGIC
-        let wallet;
-        document.getElementById('connectBtn').onclick = async () => {
-            const resp = await window.solana.connect();
-            wallet = resp.publicKey.toString();
-            document.getElementById('walletStatus').innerText = "Active: " + wallet.slice(0,8) + "...";
-        };
-
-        document.getElementById('swapBtn').onclick = async () => {
-            if (!wallet) return alert("Please connect wallet");
-            try {
-                const from = document.getElementById('fromToken').value;
-                const to = document.getElementById('toToken').value;
-                const amt = document.getElementById('amount').value;
-                const q = await fetch(`/api/quote?fromToken=${from}&toToken=${to}&amount=${amt}`);
-                const quote = await q.json();
-                const s = await fetch('/api/swap', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ quoteResponse: quote, userPublicKey: wallet })
-                });
-                const { swapTransaction } = await s.json();
-                const transaction = solanaWeb3.VersionedTransaction.deserialize(Buffer.from(swapTransaction, 'base64'));
-                const { signature } = await window.solana.signAndSendTransaction(transaction);
-                alert("Success! TX: " + signature);
-            } catch (e) { alert("Execution Failed."); }
-        };
-    </script>
-</body>
-</html>
+if __name__ == "__main__":
+    get_top_20_movers()
