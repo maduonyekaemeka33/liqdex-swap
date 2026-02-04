@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Crypto Arbitrage Dashboard</title>
+  <title>Crypto Price Dashboard</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     table { border-collapse: collapse; width: 100%; margin-top: 20px; }
@@ -12,74 +12,110 @@
   </style>
 </head>
 <body>
-  <h2>Crypto Arbitrage Dashboard</h2>
-  <table id="arbitrage-table">
+  <h2>Top Solana Coins (Exact Contract Address)</h2>
+  <table id="price-table">
     <thead>
       <tr>
         <th>Coin</th>
         <th>Binance</th>
         <th>Coinbase</th>
         <th>Kraken</th>
-        <th>Max Diff %</th>
+        <th>24h Change</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
 
   <script>
-    const coins = ["BTC", "ETH", "BNB", "SOL", "DOGE"];
-    const exchanges = ["binance", "coinbase", "kraken"];
+    // Solana token contract addresses (mint)
+    const tokenContracts = {
+      "BTC": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
+      "ETH": "2oFoZd1K3LJtZbqz8XYcM7FXhd7t2Jp9n2jz8EzvF5LQ",
+      "BNB": "BNB_CONTRACT_ADDRESS_HERE",
+      "SOL": "So11111111111111111111111111111111111111112",
+      "DOGE": "DOGE_CONTRACT_ADDRESS_HERE"
+    };
 
-    async function fetchPrices() {
-      const tableBody = document.querySelector("#arbitrage-table tbody");
+    const minLiquidity = 50000;
+    const minVolume = 10000;
+    const apiKey = "YOUR_BIRDEYE_API_KEY";
+
+    async function fetchTopTokens() {
+      const url = "https://public-api.birdeye.so/defi/v3/token/list?sort_by=price_change_24h&sort_type=desc&offset=0&limit=100";
+
+      try {
+        const res = await fetch(url, {
+          headers: {
+            "accept": "application/json",
+            "x-chain": "solana",
+            "X-API-KEY": apiKey
+          }
+        });
+
+        const data = await res.json();
+        if (!data.success) return console.error("API error:", data.message);
+
+        // Filter only your tokens by contract address
+        const topTokens = data.data.items
+          .filter(token => Object.values(tokenContracts).includes(token.mint))
+          .filter(token => token.liquidity >= minLiquidity && token.volume_24h_usd >= minVolume)
+          .map(token => {
+            const symbol = Object.keys(tokenContracts).find(key => tokenContracts[key] === token.mint);
+            return {...token, symbol};
+          });
+
+        displayTokens(topTokens);
+
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+
+    async function displayTokens(tokens) {
+      const tableBody = document.querySelector("#price-table tbody");
       tableBody.innerHTML = "";
 
-      for (let coin of coins) {
-        // Fetch prices from multiple exchanges
+      for (let token of tokens) {
         let prices = {};
 
-        // Binance
-        try {
-          const binRes = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${coin}USDT`);
-          const binData = await binRes.json();
+        // Fetch prices from exchanges
+        try { 
+          const bin = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${token.symbol}USDT`);
+          const binData = await bin.json();
           prices.binance = parseFloat(binData.price);
-        } catch(e) { prices.binance = null; }
+        } catch { prices.binance = null; }
 
-        // Coinbase
         try {
-          const coinRes = await fetch(`https://api.coinbase.com/v2/prices/${coin}-USD/spot`);
-          const coinData = await coinRes.json();
+          const coin = await fetch(`https://api.coinbase.com/v2/prices/${token.symbol}-USD/spot`);
+          const coinData = await coin.json();
           prices.coinbase = parseFloat(coinData.data.amount);
-        } catch(e) { prices.coinbase = null; }
+        } catch { prices.coinbase = null; }
 
-        // Kraken
         try {
-          const krakRes = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${coin}USD`);
-          const krakData = await krakRes.json();
+          const krak = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${token.symbol}USD`);
+          const krakData = await krak.json();
           const key = Object.keys(krakData.result)[0];
           prices.kraken = parseFloat(krakData.result[key].c[0]);
-        } catch(e) { prices.kraken = null; }
+        } catch { prices.kraken = null; }
 
-        // Calculate max difference %
-        const validPrices = Object.values(prices).filter(p => p);
-        const maxDiff = validPrices.length > 1 ? ((Math.max(...validPrices) - Math.min(...validPrices)) / Math.min(...validPrices) * 100).toFixed(2) : 0;
+        const change = parseFloat(token.price_change_24h) || 0;
+        const changeColor = change >= 0 ? "green" : "red";
 
-        // Add row to table
         tableBody.innerHTML += `
           <tr>
-            <td>${coin}</td>
-            <td>${prices.binance || "-"}</td>
-            <td>${prices.coinbase || "-"}</td>
-            <td>${prices.kraken || "-"}</td>
-            <td class="${maxDiff > 1 ? 'green' : 'red'}">${maxDiff}%</td>
+            <td>${token.symbol}</td>
+            <td>${prices.binance ? prices.binance.toLocaleString() : "-"}</td>
+            <td>${prices.coinbase ? prices.coinbase.toLocaleString() : "-"}</td>
+            <td>${prices.kraken ? prices.kraken.toLocaleString() : "-"}</td>
+            <td class="${changeColor}">${change.toLocaleString()}%</td>
           </tr>
         `;
       }
     }
 
     // Initial fetch + update every 10 seconds
-    fetchPrices();
-    setInterval(fetchPrices, 10000);
+    fetchTopTokens();
+    setInterval(fetchTopTokens, 10000);
   </script>
 </body>
 </html>
