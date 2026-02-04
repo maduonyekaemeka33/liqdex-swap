@@ -1,54 +1,85 @@
-<div id="phantom-top10" style="font-family:sans-serif;"></div>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Crypto Arbitrage Dashboard</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    .green { color: green; font-weight: bold; }
+    .red { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Crypto Arbitrage Dashboard</h2>
+  <table id="arbitrage-table">
+    <thead>
+      <tr>
+        <th>Coin</th>
+        <th>Binance</th>
+        <th>Coinbase</th>
+        <th>Kraken</th>
+        <th>Max Diff %</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-<script>
-async function fetchPhantomTop10() {
-  const apiKey = "YOUR_BIRDEYE_API_KEY"; // Replace with your key
-  const url = "https://public-api.birdeye.so/defi/v3/token/list?sort_by=price_change_24h&sort_type=desc&offset=0&limit=50"; // fetch more to filter
+  <script>
+    const coins = ["BTC", "ETH", "BNB", "SOL", "DOGE"];
+    const exchanges = ["binance", "coinbase", "kraken"];
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "accept": "application/json",
-        "x-chain": "solana",
-        "X-API-KEY": apiKey
+    async function fetchPrices() {
+      const tableBody = document.querySelector("#arbitrage-table tbody");
+      tableBody.innerHTML = "";
+
+      for (let coin of coins) {
+        // Fetch prices from multiple exchanges
+        let prices = {};
+
+        // Binance
+        try {
+          const binRes = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${coin}USDT`);
+          const binData = await binRes.json();
+          prices.binance = parseFloat(binData.price);
+        } catch(e) { prices.binance = null; }
+
+        // Coinbase
+        try {
+          const coinRes = await fetch(`https://api.coinbase.com/v2/prices/${coin}-USD/spot`);
+          const coinData = await coinRes.json();
+          prices.coinbase = parseFloat(coinData.data.amount);
+        } catch(e) { prices.coinbase = null; }
+
+        // Kraken
+        try {
+          const krakRes = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${coin}USD`);
+          const krakData = await krakRes.json();
+          const key = Object.keys(krakData.result)[0];
+          prices.kraken = parseFloat(krakData.result[key].c[0]);
+        } catch(e) { prices.kraken = null; }
+
+        // Calculate max difference %
+        const validPrices = Object.values(prices).filter(p => p);
+        const maxDiff = validPrices.length > 1 ? ((Math.max(...validPrices) - Math.min(...validPrices)) / Math.min(...validPrices) * 100).toFixed(2) : 0;
+
+        // Add row to table
+        tableBody.innerHTML += `
+          <tr>
+            <td>${coin}</td>
+            <td>${prices.binance || "-"}</td>
+            <td>${prices.coinbase || "-"}</td>
+            <td>${prices.kraken || "-"}</td>
+            <td class="${maxDiff > 1 ? 'green' : 'red'}">${maxDiff}%</td>
+          </tr>
+        `;
       }
-    });
+    }
 
-    const data = await res.json();
-    if (!data.success) return console.error("API error:", data.message);
-
-    // ---------- FILTER AND LIMIT TOP 10 ----------
-    const minLiquidity = 50000;  // $50k
-    const minVolume = 10000;     // $10k 24h
-
-    const topTokens = data.data.items
-      .filter(token => token.liquidity >= minLiquidity && token.volume_24h_usd >= minVolume)
-      .slice(0, 10); // Take top 10 after filtering
-    // ---------------------------------------------
-
-    const container = document.getElementById("phantom-top10");
-    container.innerHTML = "<h3>Top 10 Trending Solana Tokens</h3>";
-
-    topTokens.forEach((token, i) => {
-      const change = parseFloat(token.price_change_24h) || 0;
-      const changeColor = change >= 0 ? "green" : "red";
-
-      container.innerHTML += `
-        <div style="margin-bottom:10px; border-bottom:1px solid #ddd; padding:5px;">
-          <strong>${i+1}. ${token.symbol} (${token.name})</strong><br>
-          24h Change: <span style="color:${changeColor}; font-weight:bold;">${change.toLocaleString()}%</span><br>
-          Price: $${parseFloat(token.price_usd).toLocaleString()}<br>
-          Market Cap: $${parseFloat(token.market_cap || 0).toLocaleString()}
-        </div>
-      `;
-    });
-
-  } catch (err) {
-    console.error("Fetch error:", err);
-  }
-}
-
-// Initial fetch + update every 5 minutes
-fetchPhantomTop10();
-setInterval(fetchPhantomTop10, 300000);
-                      </script>
+    // Initial fetch + update every 10 seconds
+    fetchPrices();
+    setInterval(fetchPrices, 10000);
+  </script>
+</body>
+</html>
